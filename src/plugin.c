@@ -11,14 +11,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+//#include <string.h>
 #include <assert.h>
 #include <time.h>
-#include "public_errors.h"
-#include "public_errors_rare.h"
-#include "public_definitions.h"
-#include "public_rare_definitions.h"
-#include "ts3_functions.h"
+
+#include <public_errors.h>
+#include <public_errors_rare.h>
+#include <public_definitions.h>
+#include <public_rare_definitions.h>
+#include <ts3_functions.h>
+
 #include "plugin.h"
 
 static struct TS3Functions ts3Functions;
@@ -43,6 +45,9 @@ static struct TS3Functions ts3Functions;
 #define PLUGIN_AUTHOR "Bluscream"
 #define PLUGIN_VERSION "1.0"
 #define PLUGIN_CONTACT "admin@timo.de.vc"
+//#define DEVELOPER
+
+int showMetaData = 0;
 
 static char* pluginID = NULL;
 
@@ -100,7 +105,7 @@ const char* ts3plugin_author() {
 /* Plugin description */
 const char* ts3plugin_description() {
 	/* If you want to use wchar_t, see ts3plugin_name() on how to use */
-	return "Shows you more informations.";
+	return "Shows you more informations.\n\nCheck out https://r4p3.net/forums/plugins.68/ for more plugins.";
 }
 
 /* Set TeamSpeak 3 callback functions */
@@ -174,8 +179,8 @@ const char* ts3plugin_infoTitle() {
 */
 //int requested;
 void ts3plugin_infoData(uint64 serverConnectionHandlerID, uint64 id, enum PluginItemType type, char** data) {
-	int cl_type, sid, talkpower, sqnvp, ownid, unread, diff;
-	uint64 cgid, mmbu, mmbd, tmbu, tmbd, created, iconid, cfs, cfp;
+	int cl_type, sid, talkpower, sqnvp, ownid, unread, diff, cfp, cfs;
+	uint64 cgid, mmbu, mmbd, tmbu, tmbd, created, iconid;
 	char buf[80], buf2[80], buf4[80];//, time_1[80], time_2[80], time_3[80], time_4[80], time_5[80], time_6[80], time_7[80];
 	char* buf3;
 	char* plt;
@@ -189,6 +194,9 @@ void ts3plugin_infoData(uint64 serverConnectionHandlerID, uint64 id, enum Plugin
 	char* sgids;
 	char* gip;
 	char* ip;
+	char* metaData;
+	char* version;
+	char* avatar;
 	//char* cln;
 	//char* clp;
 	//char* teststr;
@@ -299,12 +307,23 @@ void ts3plugin_infoData(uint64 serverConnectionHandlerID, uint64 id, enum Plugin
 		if (ts3Functions.getChannelVariableAsUInt64(serverConnectionHandlerID, (anyID)id, CHANNEL_ICON_ID, &iconid) != ERROR_ok) {
 			return;
 		}
-		if (ts3Functions.getChannelVariableAsUInt64(serverConnectionHandlerID, (anyID)id, CHANNEL_FORCED_SILENCE, &cfs) != ERROR_ok) {
+		if (ts3Functions.getChannelVariableAsInt(serverConnectionHandlerID, (anyID)id, CHANNEL_FORCED_SILENCE, &cfs) != ERROR_ok) {
 			return;
 		}
-		if (ts3Functions.getChannelVariableAsUInt64(serverConnectionHandlerID, (anyID)id, CHANNEL_FLAG_PRIVATE, &cfp) != ERROR_ok) {
+		if (ts3Functions.getChannelVariableAsInt(serverConnectionHandlerID, (anyID)id, CHANNEL_FLAG_PRIVATE, &cfp) != ERROR_ok) {
 			return;
 		}
+		if (ts3Functions.getChannelVariableAsUInt64(serverConnectionHandlerID, (anyID)id, CHANNEL_CODEC_LATENCY_FACTOR, &created) != ERROR_ok) {
+			return;
+		}
+#ifdef DEVELOPER
+		if (ts3Functions.getChannelVariableAsString(serverConnectionHandlerID, (anyID)id, CHANNEL_SECURITY_SALT, &plt) != ERROR_ok) {
+			return;
+		}
+		if (ts3Functions.getChannelVariableAsString(serverConnectionHandlerID, (anyID)id, CHANNEL_PASSWORD, &plk) != ERROR_ok) {
+			return;
+		}
+#endif
 		/*if (ts3Functions.getChannelClientList(serverConnectionHandlerID, (anyID)id, &queries) == ERROR_ok) {
 			for (size_t i = 0; i < length(queries); i++)
 			{
@@ -318,13 +337,20 @@ void ts3plugin_infoData(uint64 serverConnectionHandlerID, uint64 id, enum Plugin
 			return;
 		}*/
 		*data = (char*)malloc(INFODATA_BUFSIZE * sizeof(char));
-		snprintf(*data, INFODATA_BUFSIZE, "%s\nPhonetic Name: %s\nIcon ID: [color=darkgrey]%u[/color]\nForced Silence: [color=blue]%u[/color]\nPrivate Channel: [color=blue]%u[/color]\nQuery Clients:\n", buf, string, iconid, cfs, cfp);
+#ifdef DEVELOPER
+		snprintf(*data, INFODATA_BUFSIZE, "%s\nPhonetic Name: %s\nIcon ID: [color=darkgrey]%u[/color]\nForced Silence: [color=blue]%u[/color]\nPrivate Channel: [color=blue]%u[/color]\nLatency Factor: %u\nSecurity Salt: %s\nPassword: %s", buf, string, iconid, cfs, cfp, created, plt, plk);
+#endif
+#ifndef DEVELOPER
+		snprintf(*data, INFODATA_BUFSIZE, "%s\nPhonetic Name: %s\nIcon ID: [color=darkgrey]%u[/color]\nForced Silence: [color=blue]%i[/color]\nPrivate Channel: [color=blue]%i[/color]\nLatency Factor: %u\n", buf, string, iconid, cfs, cfp, created);
+#endif
 		ts3Functions.freeMemory(string);
+		//ts3Functions.freeMemory(plt);
 		//ts3Functions.freeMemory(queries);
 		//ts3Functions.freeMemory(mid);
 		break;
 	case PLUGIN_CLIENT:
 		ts3Functions.requestClientVariables(serverConnectionHandlerID, (anyID)id, NULL);
+		ts3Functions.requestConnectionInfo(serverConnectionHandlerID, (anyID)id, NULL);
 			now = time(NULL);
 			time(&now);
 			ts = *localtime(&now);
@@ -391,15 +417,55 @@ void ts3plugin_infoData(uint64 serverConnectionHandlerID, uint64 id, enum Plugin
 		if (ts3Functions.getClientVariableAsUInt64(serverConnectionHandlerID, (anyID)id, CLIENT_TOTAL_BYTES_DOWNLOADED, &tmbd) != ERROR_ok) {
 			return;
 		}
-		/*if (ts3Functions.getClientVariableAsString(serverConnectionHandlerID, (anyID)id, TEST, &teststr) != ERROR_ok) {
+		if (ts3Functions.getClientVariableAsString(serverConnectionHandlerID, (anyID)id, CLIENT_VERSION, &version) != ERROR_ok) {
 			return;
-		}*/
+		}
+		if (ts3Functions.getClientVariableAsString(serverConnectionHandlerID, (anyID)id, CLIENT_FLAG_AVATAR, &avatar) != ERROR_ok) {
+			return;
+		}
+		unsigned int error;
+		char* ping = NULL;
+		char* ip = NULL;
+		error = NULL;
+		error = ts3Functions.getConnectionVariableAsString(serverConnectionHandlerID, (anyID)id, CONNECTION_CLIENT_IP, &ip);
+		if (error != ERROR_ok) { ip = "[color=lightgray]Unknown[/color]"; }
+		error = NULL;
+		error = ts3Functions.getConnectionVariableAsString(serverConnectionHandlerID, (anyID)id, CONNECTION_PING, &ping);
+		if (error != ERROR_ok) { ping = "[color=red]Unknown[/color]"; }
+		error = NULL;
+		char* pingplusminus = NULL;
+		error = ts3Functions.getConnectionVariableAsString(serverConnectionHandlerID, (anyID)id, CONNECTION_PING_DEVIATION, &pingplusminus);
+		if (error != ERROR_ok) { pingplusminus = "[color=red](/)[/color]"; }
+		error = NULL;
+		char* idletime = NULL;
+		error = ts3Functions.getConnectionVariableAsString(serverConnectionHandlerID, (anyID)id, CONNECTION_IDLE_TIME, &idletime);
+		if (error != ERROR_ok) { idletime = "[color=red]Unkown[/color]"; }
+		if (showMetaData == 1) {
+			if (ts3Functions.getClientVariableAsString(serverConnectionHandlerID, (anyID)id, CLIENT_META_DATA, &metaData) != ERROR_ok) {
+				return;
+			}
+		}
 		*data = (char*)malloc(INFODATA_BUFSIZE * sizeof(char));
-		snprintf(*data, INFODATA_BUFSIZE, "%s\nType: [COLOR=#1a2643]%s[/COLOR] from [color=darkgreen]%s[/color]\nPhonetic Name: [color=darkblue]%s[/color]\nBadges: %s\nIcon ID: [color=darkgrey]%u[/color]\nUnread Messages: [color=darkblue][b]%i[/b][/color]\nTalk Power: [color=darkgreen]%i[/color]\nNeeded ServerQuery View Power: [color=blue]%i[/color]\nServer Group IDs: [color=firebrick]%s[/color]\nChannel Group ID: [color=darkorange]%i[/color]\nMonthly Traffic: Up: [color=blue]%u[/color] B | Down: [color=red]%u[/color] B\nTotal Traffic: Up: [color=darkblue]%u[/color] B | Down: [color=firebrick]%u[/color] B", buf, clienttype, clc, string, clb, iconid, unread, talkpower, sqnvp, sgids, cgid, mmbu, mmbd, tmbu, tmbd);//Login Name: \"%s\"\nLogin PW: \"%s\"\n cln, clp,
+		if (showMetaData == 1) {
+			snprintf(*data, INFODATA_BUFSIZE, "%s\nType: [COLOR=#1a2643]%s[/COLOR] from [color=darkgreen]%s[/color]\nVersion: %s\nIP: [color=lightgreen]%s[/color]\nPing: [color=lightblue]%s[/color] +/- [color=aqua]%s[/color]\nIdle Time: %s ms\nPhonetic Name: [color=darkblue]%s[/color]\nBadges: [color=grey]%s[/color]\nIcon ID: [color=darkgrey]%u[/color]\nUnread Messages: [color=darkblue][b]%i[/b][/color]\nTalk Power: [color=darkgreen]%i[/color]\nNeeded ServerQuery View Power: [color=blue]%i[/color]\nAvatar Flag: [color=blue]%s[/color]\nServer Group IDs: [color=firebrick]%s[/color]\nChannel Group ID: [color=darkorange]%i[/color]\nMonthly Traffic: Up: [color=blue]%u[/color] B | Down: [color=red]%u[/color] B\nTotal Traffic: Up: [color=darkblue]%u[/color] B | Down: [color=firebrick]%u[/color] B\nMeta Data: %s", buf, clienttype, clc, version, ip, ping, pingplusminus, idletime, string, clb, iconid, unread, talkpower, sqnvp, avatar, sgids, cgid, mmbu, mmbd, tmbu, tmbd, metaData);//Login Name: \"%s\"\nLogin PW: \"%s\"\n cln, clp,
+		}
+		else {
+			snprintf(*data, INFODATA_BUFSIZE, "%s\nType: [COLOR=#1a2643]%s[/COLOR] from [color=darkgreen]%s[/color]\nVersion: %s\nIP: [color=lightgreen]%s[/color]\nPing: [color=lightblue]%s[/color] +/- [color=aqua]%s[/color]\nIdle Time: %s ms\nPhonetic Name: [color=darkblue]%s[/color]\nBadges: [color=grey]%s[/color]\nIcon ID: [color=darkgrey]%u[/color]\nUnread Messages: [color=darkblue][b]%i[/b][/color]\nTalk Power: [color=darkgreen]%i[/color]\nNeeded ServerQuery View Power: [color=blue]%i[/color]\nAvatar Flag: [color=blue]%s[/color]\nServer Group IDs: [color=firebrick]%s[/color]\nChannel Group ID: [color=darkorange]%i[/color]\nMonthly Traffic: Up: [color=blue]%u[/color] B | Down: [color=red]%u[/color] B\nTotal Traffic: Up: [color=darkblue]%u[/color] B | Down: [color=firebrick]%u[/color] B", buf, clienttype, clc, version, ip, ping, pingplusminus, idletime, string, clb, iconid, unread, talkpower, sqnvp, avatar, sgids, cgid, mmbu, mmbd, tmbu, tmbd);//Login Name: \"%s\"\nLogin PW: \"%s\"\n cln, clp,
+		}
 		ts3Functions.freeMemory(string);
 		ts3Functions.freeMemory(sgids);
 		ts3Functions.freeMemory(clc);
 		ts3Functions.freeMemory(clb);
+		ts3Functions.freeMemory(avatar);
+		//ts3Functions.freeMemory(ip);
+		//ts3Functions.freeMemory(ping);
+		//ts3Functions.freeMemory(pingplusminus);
+		//ts3Functions.freeMemory(idletime);
+		ts3Functions.freeMemory(version);
+		if (showMetaData == 1) {
+			ts3Functions.freeMemory(metaData);
+		}
+		//ts3Functions.freeMemory(ip);
 		//ts3Functions.freeMemory(cln);
 		//ts3Functions.freeMemory(clp);
 		//ts3Functions.freeMemory(teststr);
@@ -457,7 +523,10 @@ static struct PluginMenuItem* createMenuItem(enum PluginMenuType type, int id, c
 // * These IDs are freely choosable by the plugin author. It's not really needed to use an enum, it just looks prettier.
 // */
 enum {
-		MENU_ID_GLOBAL_1
+	MENU_ID_CLIENT_GETDETAILINFORMATION,
+	MENU_ID_CHANNEL_GETDETAILINFORMATION,
+	MENU_ID_GLOBAL_METADATA,
+	MENU_ID_GLOBAL_ABOUT
 };
 //
 ///*
@@ -484,8 +553,11 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
 	 * e.g. for "test_plugin.dll", icon "1.png" is loaded from <TeamSpeak 3 Client install dir>\plugins\test_plugin\1.png
 	 */
 
-	BEGIN_CREATE_MENUS(1);  /* IMPORTANT: Number of menu items must be correct! */
-	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_1, "About", "about.png");
+	BEGIN_CREATE_MENUS(4);  /* IMPORTANT: Number of menu items must be correct! */
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_CLIENT, MENU_ID_CLIENT_GETDETAILINFORMATION, "Client Informations", "clientinfo.png");
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_CHANNEL, MENU_ID_CHANNEL_GETDETAILINFORMATION, "Channel Informations", "channelinfo.png");
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_METADATA, "Show/Hide MetaData", "meta.png");
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_ABOUT, "About", "about.png");
 	END_CREATE_MENUS;  /* Includes an assert checking if the number of menu items matched */
 
 	/*
@@ -500,16 +572,76 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
 
 void ts3plugin_onMenuItemEvent(uint64 serverConnectionHandlerID, enum PluginMenuType type, int menuItemID, uint64 selectedItemID) {
 	switch (type) {
-		case PLUGIN_MENU_TYPE_GLOBAL:
-			switch (menuItemID) {
-				case MENU_ID_GLOBAL_1:
-					MessageBoxA(0, PLUGIN_NAME " v" PLUGIN_VERSION " developed by " PLUGIN_AUTHOR " (" PLUGIN_CONTACT ")", "About " PLUGIN_NAME, MB_ICONINFORMATION);
-					break;
-				default:
-					break;
+	/*case PLUGIN_MENU_TYPE_CLIENT: {
+		switch (menuItemID) {
+		case MENU_ID_CLIENT_GETDETAILINFORMATION: {
+			int errorCode;
+			char *channelName;
+			if ((errorCode = ts3Functions.getClientVariableAsString(serverConnectionHandlerID, selectedItemID, CLIENT_NICKNAME, &channelName)) != ERROR_ok) {
+
+			}
+
+			std::wstringstream dialogMessage;
+			dialogMessage << "ClientID: " << selectedItemID << "\n";
+			dialogMessage << "Nickname: " << channelName << "\n";
+			MessageBox(NULL, dialogMessage.str().c_str(), L"Client information", MB_ICONINFORMATION | MB_OK);
+
+			if (channelName != NULL) {
+				ts3Functions.freeMemory(channelName);
 			}
 			break;
-		default:
+		}
+		default: {
+			ts3Functions.logMessage("Unkown onMenuItemEvent item 'menuItemID'", LogLevel_WARNING, "TeamSpeak3Tools", serverConnectionHandlerID);
+		}
+		}
+	}
+	case PLUGIN_MENU_TYPE_CHANNEL: {
+		switch (menuItemID) {
+		case MENU_ID_CHANNEL_GETDETAILINFORMATION: {
+			int errorCode;
+			char *channelName;
+			if ((errorCode = ts3Functions.getChannelVariableAsString(serverConnectionHandlerID, selectedItemID, CHANNEL_NAME, &channelName)) != ERROR_ok) {
+
+			}
+
+			std::wstringstream dialogMessage;
+			dialogMessage << "ChannelId: " << selectedItemID << "\n";
+			dialogMessage << "ChannelName: " << channelName << "\n";
+			MessageBox(NULL, dialogMessage.str().c_str(), L"Channel information", MB_ICONINFORMATION | MB_OK);
+
+			if (channelName != NULL) {
+				ts3Functions.freeMemory(channelName);
+			}
 			break;
+		}
+		default: {
+			ts3Functions.logMessage("Unkown onMenuItemEvent item 'menuItemID'", LogLevel_WARNING, "TeamSpeak3Tools", serverConnectionHandlerID);
+			break;
+		}
+	}*/
+	case PLUGIN_MENU_TYPE_GLOBAL: {
+		switch (menuItemID) {
+			case MENU_ID_GLOBAL_METADATA:
+				if (showMetaData == 1) {
+					showMetaData = 0;
+					ts3Functions.printMessageToCurrentTab(PLUGIN_NAME " Plugin: [color=red]Not longer showing MetaData in Client InfoFrame.[/color]");
+				}
+				else {
+					showMetaData = 1;
+					ts3Functions.printMessageToCurrentTab(PLUGIN_NAME " Plugin: [color=green]Now showing MetaData in Client InfoFrame.[/color]");
+				}
+			break;
+			case MENU_ID_GLOBAL_ABOUT:
+				ts3Functions.printMessageToCurrentTab(PLUGIN_NAME "Plugin v" PLUGIN_VERSION " developed by " PLUGIN_AUTHOR " (" PLUGIN_CONTACT ")");
+				MessageBoxA(0, PLUGIN_NAME "Plugin v" PLUGIN_VERSION " developed by " PLUGIN_AUTHOR " (" PLUGIN_CONTACT ")", "About " PLUGIN_NAME " Plugin", MB_ICONINFORMATION);
+				break;
+			default:
+				break;
+		}
+		break;
+	}
+	default:
+		break;
 	}
 }
