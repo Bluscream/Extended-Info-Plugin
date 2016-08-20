@@ -86,6 +86,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>D:\Program Files\Teamspeak 3 TestClient\plugins</OutDir>
     <TargetName>$(ProjectName)_x64</TargetName>
+    <IncludePath>D:\Coding\Projekte\Extended-Info-Plugin\include\teamspeak;D:\Coding\Projekte\Extended-Info-Plugin\include\teamlog;D:\Coding\Projekte\Extended-Info-Plugin\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

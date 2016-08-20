@@ -15,6 +15,8 @@
 #include <assert.h>
 #include <time.h>
 
+#include <clientlib_publicdefinitions.h>
+#include <logtypes.h>
 #include <public_errors.h>
 #include <public_errors_rare.h>
 #include <public_definitions.h>
@@ -204,7 +206,7 @@ void ts3plugin_infoData(uint64 serverConnectionHandlerID, uint64 id, enum Plugin
 	char* clb;
 	char *queries;
 	time_t now;
-	struct tm  ts;
+	struct tm ts;
 
 	switch (type) {
 	case PLUGIN_SERVER:
