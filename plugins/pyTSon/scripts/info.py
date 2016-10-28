@@ -14,7 +14,7 @@ class info(ts3plugin):
     infoTitle = ""
     menuItems = [(ts3defines.PluginMenuType.PLUGIN_MENU_TYPE_GLOBAL, 0, "Extended Info -> Toggle Colors", "icon.png"),(ts3defines.PluginMenuType.PLUGIN_MENU_TYPE_GLOBAL, 1, "Extended Info -> Toggle Meta", "icon.png")]
     hotkeys = []
-    colored = False
+    colored = True
     meta = False
 
 
