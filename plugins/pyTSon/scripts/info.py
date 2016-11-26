@@ -2,7 +2,7 @@ from ts3plugin import ts3plugin, PluginHost
 import ts3, ts3defines, datetime, configparser, os.path
 from PythonQt.QtGui import QDialog
 from pytsonui import getValues, ValueType
-#from collections import OrderedDict
+from collections import OrderedDict
 
 class info(ts3plugin):
     name = "Extended Info"
@@ -12,7 +12,7 @@ class info(ts3plugin):
     author = "Bluscream"
     description = "Shows you more informations.\nBest to use together with a Extended Info Theme.\nClick on \"Settings\" to select what items you want to see :)\n\nHomepage: https://github.com/Bluscream/Extended-Info-Plugin\n\n\nCheck out https://r4p3.net/forums/plugins.68/ for more plugins."
     offersConfigure = True
-    commandKeyword = "d"
+    commandKeyword = ""
     infoTitle = "[b]"+name+":[/b]
     menuItems = []
     hotkeys = []
@@ -25,9 +25,9 @@ class info(ts3plugin):
         config = configparser.ConfigParser()
         if os.path.isfile(self.ini):
             config.read(self.ini)
-            #self.SERVER = config['SERVER'].items()
+            self.SERVER = config['SERVER'].items()
             self.CHANNEL = config['CHANNEL'].items()
-            #self.CLIENT = config['CLIENT'].items()
+            self.CLIENT = config['CLIENT'].items()
         else:
             config['GENERAL'] = { "Debug": "False", "Colored": "False" }
             config['SERVER'] = {
