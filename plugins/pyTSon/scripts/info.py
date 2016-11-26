@@ -1,7 +1,8 @@
 from ts3plugin import ts3plugin, PluginHost
-import ts3, ts3defines, datetime
+import ts3, ts3defines, datetime, configparser, os.path
 from PythonQt.QtGui import QDialog
 from pytsonui import getValues, ValueType
+#from collections import OrderedDict
 
 class info(ts3plugin):
     name = "Extended Info"
@@ -9,18 +10,48 @@ class info(ts3plugin):
     requestAutoload = True
     version = "1.0"
     author = "Bluscream"
-    description = "Shows you more informations.\nBest to use together with a Extended Info Theme.\nClick on \"Settings\" to select what items you want to see :)\n\nCheck out https://r4p3.net/forums/plugins.68/ for more plugins."
+    description = "Shows you more informations.\nBest to use together with a Extended Info Theme.\nClick on \"Settings\" to select what items you want to see :)\n\nHomepage: https://github.com/Bluscream/Extended-Info-Plugin\n\n\nCheck out https://r4p3.net/forums/plugins.68/ for more plugins."
     offersConfigure = True
-    commandKeyword = ""
-    infoTitle = "[b]Extended Info[/b]:"
+    commandKeyword = "d"
+    infoTitle = "[b]"+name+":[/b]
     menuItems = []
     hotkeys = []
+    debug = False
     colored = False
     meta = False
-
+    ini = os.path.join(ts3.getConfigPath(), "extended_info.ini")
 
     def __init__(self):
-        ts3.printMessageToCurrentTab('[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())+" [color=orange]"+self.name+"[/color] Plugin for pyTSon by [url=https://github.com/Bluscream]Bluscream[/url] loaded.")
+        config = configparser.ConfigParser()
+        if os.path.isfile(self.ini):
+            config.read(self.ini)
+            #self.SERVER = config['SERVER'].items()
+            self.CHANNEL = config['CHANNEL'].items()
+            #self.CLIENT = config['CLIENT'].items()
+        else:
+            config['GENERAL'] = { "Debug": "False", "Colored": "False" }
+            config['SERVER'] = {
+                "Last Requested": "True", "Name": "False", "Phonetic Name": "False", "Version": "False", "Platform": "False", "Clients": "False", "Channels": "False", "Connections": "False", "Uptime": "False", "Address": "False", "Resolved IP": "False",
+                "Icon ID": "False", "License": "False", "UID": "False", "ID": "False", "Machine ID": "False", "Autostart": "False", "Password": "False", "Codec Encrypted": "False", "Default Groups": "False", "Max Bandwith": "False", "Banner": "False",
+                "Hostbutton": "False", "Complaint Settings": "False", "Clients for forced Silence": "False", "Priority speaker dimm": "False", "Antiflood": "False", "Up/Download Quota": "False",
+                "Month Bytes Transfered": "False", "Total Bytes Transfered": "False", "Needed Security Level": "False", "Log Settings": "False", "Min Client Version": "False", "Weblist Status": "False",
+                "Privilege Key": "False", "Delete Channels after": "False"
+            }
+            config['CHANNEL'] = {
+                "Last Requested": "False", "Name": "False", "Phonetic Name": "False", "ID": "False", "Topic": "False", "Clients": "False", "Needed Talk Power": "False", "Order": "False", "Codec": "False", "Flags": "False", "Subscribed": "False",
+                "Encrypted": "False", "Description": "False", "Icon ID": "False", "Delete Delay": "False", "Filepath": "False"
+            }
+            config['CLIENT'] = {
+                "Last Requested": "False", "Name": "False", "Phonetic Name": "False", "Version": "False", "Platform": "False", "Country": "False", "Client ID": "False", "Database ID": "False", "UID": "False", "Is Talking": "False", "Audio Status": "False",
+                "Idle Time": "False", "Default Channel": "False", "Server Password": "False", "Volume Modifcator": "False", "Version Sign": "False", "Security Hash": "False", "Last Var Request": "False", "Login Credentials": "False",
+                "Group ID's": "False", "First Connection": "False", "Last Connection": "False", "Total Connections": "False", "Away": "False", "Talk Power": "False", "Talk Power Request": "False", "Description": "False", "Is Talker": "False",
+                "Month Bytes Transfered": "False", "Total Bytes Transfered": "False", "Is Priority Speaker": "False", "Unread Offline Messages": "False", "Needed ServerQuery View Power": "False", "Default Token": "False", "Meta Data": "False"
+            }
+            with open(self.ini, 'w') as configfile:
+                config.write(configfile)
+        ts3.logMessage(self.name+" script for pyTSon by "+self.author+" loaded from \""+__file__+"\".", ts3defines.LogLevel.LogLevel_INFO, "Python Script", 0)
+        if self.debug:
+            ts3.printMessageToCurrentTab('[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.now())+" [color=orange]"+self.name+"[/color] Plugin for pyTSon by [url=https://github.com/"+self.author+"]"+self.author+"[/url] loaded.")
 
     def configDialogClosed(self, r, vals):
         if r == QDialog.Accepted:
@@ -28,28 +59,11 @@ class info(ts3plugin):
 
     def configure(self, qParentWidget):
         d = dict()
-        d['debug'] = (ValueType.boolean, "Debug", False, None, None)
-        d['colored'] = (ValueType.boolean, "Colored InfoData", False, None, None)
-        d['server'] = (ValueType.listitem, "Server", (
-            [
-                "Date/Time", "Name", "Phonetic Name", "Version", "Platform", "Clients", "Channels", "Connections", "Uptime", "Address", "Resolved IP",
-                "Icon ID", "License", "UID", "ID", "Machine ID", "Autostart", "Password", "Codec Encrypted", "Default Groups", "Max Bandwith", "Banner",
-                "Hostbutton", "Complaint Settings", "Clients for forced Silence", "Priority speaker dimm", "Antiflood", "Up/Download Quota",
-                "Month Bytes Transfered", "Total Bytes Transfered", "Needed Security Level", "Log Settings", "Min Client Version", "Weblist Status",
-                "Privilege Key", "Delete Channels after"
-            ], [2,9,10,11,13,14,15,28,29,32]), 0, 0)
-        d['channel'] = (ValueType.listitem, "Channel", (
-            [
-                "Date/Time", "Name", "Phonetic Name", "Topic", "Clients", "Needed Talk Power", "Order", "Codec", "Flags", "Subscribed",
-                "Encrypted", "Description", "Icon ID", "Delete Delay", "Filepath"
-            ], [2,8,12]), 0, 0)
-        d['client'] = (ValueType.listitem, "Client", (
-            [
-                "Date/Time", "Name", "Phonetic Name", "Version", "Platform", "Country", "Client ID", "Database ID", "UID", "Is Talking", "Audio Status",
-                "Idle Time", "Default Channel", "Server Password", "Volume Modifcator", "Version Sign", "Security Hash", "Last Var Request", "Login Credentials",
-                "Group ID's", "First Connection", "Last Connection", "Total Connections", "Away", "Talk Power", "Talk Power Request", "Description", "Is Talker",
-                "Month Bytes Transfered", "Total Bytes Transfered", "Is Priority Speaker", "Unread Offline Messages", "Needed ServerQuery View Power", "Default Token"
-            ], [2,6,7,8,11,15,16,19,24,28,29,31,32]), 0, 0)
+        #d['bool_debug'] = (ValueType.boolean, "Debug", if self.config['SERVER']['debug'] == "True"], None, None)
+        #d['bool_colored'] = (ValueType.boolean, "Colored InfoData", if self.config['SERVER']['colored'] == "True"], None, None)
+        #d['list_server'] = (ValueType.listitem, "Server", ([key for key in self.config['SERVER']], [i for i, key in enumerate(self.config['SERVER']) if self.config['SERVER'][key] == "True"]), 0, 0)
+        d['list_channel'] = (ValueType.listitem, "Channel", ([key for key in self.config['CHANNEL']], [i for i, key in enumerate(self.config['CHANNEL']) if self.config['CHANNEL'][key] == "True"]), 0, 0)
+        #d['list_client'] = (ValueType.listitem, "Client", ([key for key in self.config['CLIENT']], [i for i, key in enumerate(self.config['CLIENT']) if self.config['CLIENT'][key] == "True"]), 0, 0)
         widgets = getValues(None, "Extended Info Configuration", d, self.configDialogClosed)
 
     def infoData(cls, schid, id, atype):
